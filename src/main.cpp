@@ -132,8 +132,8 @@ const char* htmlHomePage PROGMEM = R"HTMLHOMEPAGE(
       -webkit-appearance: none;
       appearance: none;
       
-      width: 80px;
-      height: 80px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       background: red;
       cursor: pointer;
@@ -175,14 +175,14 @@ border: 1px solid black;
         
         <td colspan=2 style="padding-left:75px">
          <div class="slidecontainerV">
-            <input type="range" min="0" max="180" value="90" class="sliderV" id="Gripper" oninput='sendButtonInput("Gripper",value)' >
+            <input type="range" min="0" max="180" value="90" class="sliderV" id="Links" oninput='sendButtonInput("Links",value)' >
           </div>
         </td>
       
        
         <td colspan=2 style="padding-left:75px">
          <div class="slidecontainerV">
-            <input type="range" min="0" max="180" value="90" class="sliderV" id="Elbow" oninput='sendButtonInput("Elbow",value)'>
+            <input type="range" min="0" max="180" value="90" class="sliderV" id="Rechts" oninput='sendButtonInput("Rechts",value)'>
           </div>
         </td>
       <tr/>
@@ -190,11 +190,11 @@ border: 1px solid black;
        <tr>
         <td  style="text-align:left;font-size:25px"><b>Signal</b></td>
 
-       <td><input type="button" id="Signal" value="Signal" ontouchend='onclickButton(this)'></td>
+       <td><input type="button" id="Signal" value="Signal" ontouchend='onclickButton(this)' onclick='onclickButton(this)'></td>
    
-        <td><input type="button" id="Licht" value="Licht"  onclick='onclickButton(this)'></td>
+        <td><input type="button" id="Licht" value="Licht"  ontouchend='onclickButton(this)' onclick='onclickButton(this)'></td>
      
-      
+      <!--
       </tr>  
       <tr>
         <td style="text-align:left;font-size:25px"><b>Shoulder:</b></td>
@@ -231,7 +231,7 @@ border: 1px solid black;
         <td><input type="button" id="Test" value="mOFF"  onclick='onclickButton(this)'></td>
      
       
-      </tr>      
+      </tr>  -->    
     </table>
   
     <script>
@@ -355,6 +355,7 @@ void onRobotArmInputWebSocketEvent(AsyncWebSocket *server,
         Serial.printf("Key [%s] Value[%s]\n", key.c_str(), value.c_str()); 
         int valueInt = atoi(value.c_str()); 
         
+
         if (key == "Record")
         {
            Serial.printf("key record\n");
@@ -370,17 +371,13 @@ void onRobotArmInputWebSocketEvent(AsyncWebSocket *server,
           Serial.printf("key play\n");
           playRecordedSteps = valueInt;
         }
-        else if (key == "Base")
+         else if (key == "Links")
         {
-          writeServoValues(0, valueInt);            
+          writeServoValues(0, valueInt);           
         } 
-        else if (key == "Shoulder")
+        else if (key == "Rechts")
         {
           writeServoValues(1, valueInt);           
-        } 
-        else if (key == "Elbow")
-        {
-          writeServoValues(2, valueInt);           
         }         
         else if (key == "Gripper")
         {
@@ -395,6 +392,15 @@ void onRobotArmInputWebSocketEvent(AsyncWebSocket *server,
             Serial.printf("GripperUp\n");
         }
         
+        else if (key == "Signal")
+        {
+            Serial.printf("Signal\n");
+        }
+        else if (key == "Licht")
+        {
+            Serial.printf("Licht\n");
+        }
+
              
       }
       break;
