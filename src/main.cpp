@@ -214,6 +214,7 @@ border: 1px solid black;
         </td>
       </tr> 
       
+      
      
 
       <tr>
@@ -289,6 +290,8 @@ border: 1px solid black;
           {
             disabled = "none";            
           }
+          document.getElementById("Rechts").style.pointerEvents = disabled;
+          document.getElementById("Links").style.pointerEvents = disabled;
           document.getElementById("Gripper").style.pointerEvents = disabled;
           document.getElementById("Elbow").style.pointerEvents = disabled;          
           document.getElementById("Shoulder").style.pointerEvents = disabled;          
@@ -489,6 +492,11 @@ void setUpPinModes()
     servoPins[i].servo.attach(servoPins[i].servoPin);
     servoPins[i].servo.write(servoPins[i].initialPosition);    
   }
+  pinMode(32,OUTPUT);
+  digitalWrite(32,LOW);
+  pinMode(14,OUTPUT);
+  digitalWrite(14,LOW);
+  
 }
 
 
@@ -496,6 +504,8 @@ void setup(void)
 {
   setUpPinModes();
   Serial.begin(115200);
+
+
 
   WiFi.softAP(ssid, password);
   IPAddress IP = WiFi.softAPIP();
