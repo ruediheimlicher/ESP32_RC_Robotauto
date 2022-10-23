@@ -352,7 +352,7 @@ void onRobotArmInputWebSocketEvent(AsyncWebSocket *server,
         std::string key, value;
         std::getline(ss, key, ',');
         std::getline(ss, value, ',');
-        Serial.printf("Key [%s] Value[%s]\n", key.c_str(), value.c_str()); 
+        //Serial.printf("Key [%s] Value[%s]\n", key.c_str(), value.c_str()); 
         int valueInt = atoi(value.c_str()); 
         
 
@@ -373,10 +373,12 @@ void onRobotArmInputWebSocketEvent(AsyncWebSocket *server,
         }
          else if (key == "Links")
         {
+          Serial.printf("Links: [%d]\n",valueInt);
           writeServoValues(0, valueInt);           
         } 
         else if (key == "Rechts")
         {
+          Serial.printf("Rechts: [%d]\n",valueInt);
           writeServoValues(1, valueInt);           
         }         
         else if (key == "Gripper")
@@ -444,6 +446,9 @@ void writeServoValues(int servoIndex, int value)
     recordedSteps.push_back(recordedStep);  
     previousTimeInMilli = currentTime;         
   }
+  Serial.printf("pin: [%d] servoindex: [%d] value: [%d]  \n",servoPins[servoIndex].servoPin , servoIndex, value);
+
+
   servoPins[servoIndex].servo.write(value);   
 }
 
