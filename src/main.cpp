@@ -8,10 +8,16 @@
 #include <sstream>
 
 // Prototypes
+
+int tonfolge[3] = {554, 329, 440};
 void sendCurrentRobotArmState();
 void writeServoValues(int servoIndex, int value);
 
-
+uint8_t tonstatus = 0;
+uint8_t tonindex = 0;
+void playTon(int ton);
+#define START_TON 0
+#define END_TON 1
 struct ServoPins
 {
   Servo servo;
@@ -21,10 +27,10 @@ struct ServoPins
 };
 std::vector<ServoPins> servoPins = 
 {
-  { Servo(), 27 , "Base", 90},
-  { Servo(), 26 , "Shoulder", 90},
-  { Servo(), 25 , "Elbow", 90},
-  { Servo(), 33 , "Gripper", 90},
+  { Servo(), 14 , "Rechts", 90},
+  { Servo(), 32 , "Links", 90},
+  { Servo(), 15 , "Elbow", 90},
+  { Servo(), 27 , "Gripper", 90},
 };
 
 struct RecordedStep
@@ -274,7 +280,8 @@ border: 1px solid black;
       function onclickButton(button) 
       {
         
-        button.value = (button.value == "ON") ? "OFF" : "ON" ;        
+        //button.value = (button.value == "ON") ? "OFF" : "ON" ;        
+        button.value = "Signal";
         button.style.backgroundColor = (button.value == "ON" ? "green" : "red");          
         var value = (button.value == "ON") ? 1 : 0 ;
         sendButtonInput(button.id, value);
@@ -294,8 +301,7 @@ border: 1px solid black;
           document.getElementById("Links").style.pointerEvents = disabled;
           document.getElementById("Gripper").style.pointerEvents = disabled;
           document.getElementById("Elbow").style.pointerEvents = disabled;          
-          document.getElementById("Shoulder").style.pointerEvents = disabled;          
-          document.getElementById("Base").style.pointerEvents = disabled; 
+          
           document.getElementById("Record").style.pointerEvents = disabled;
         }
         if(button.id == "Record")
@@ -400,6 +406,8 @@ void onRobotArmInputWebSocketEvent(AsyncWebSocket *server,
         else if (key == "Signal")
         {
             Serial.printf("Signal\n");
+            // playTon(1);
+            tonstatus |= (1<<START_TON); // 
         }
         else if (key == "Licht")
         {
@@ -455,6 +463,14 @@ void writeServoValues(int servoIndex, int value)
   servoPins[servoIndex].servo.write(value);   
 }
 
+void playTon(int ton)
+{
+  // Cis: 554
+  // e: 330
+  // a: 440
+  tone(18,tonfolge[ton],800);
+}
+
 void playRecordedRobotArmSteps()
 {
   if (recordedSteps.size() == 0)
@@ -492,10 +508,7 @@ void setUpPinModes()
     servoPins[i].servo.attach(servoPins[i].servoPin);
     servoPins[i].servo.write(servoPins[i].initialPosition);    
   }
-  pinMode(32,OUTPUT);
-  digitalWrite(32,LOW);
-  pinMode(14,OUTPUT);
-  digitalWrite(14,LOW);
+ 
   
 }
 
@@ -526,6 +539,21 @@ void setup(void)
 void loop() 
 {
   wsRobotArmInput.cleanupClients();
+  if (tonstatus & (1<<START_TON))
+  {
+    playTon(tonindex);
+    
+    if (tonindex < 3)
+    {
+        tonindex++;
+    }
+    else
+    {
+      tonstatus &= ~(1<<START_TON);
+      tonindex = 0;
+    }
+    
+  }
   if (playRecordedSteps)
   { 
     playRecordedRobotArmSteps();
