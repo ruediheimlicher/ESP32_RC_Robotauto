@@ -7,17 +7,40 @@
 #include <iostream>
 #include <sstream>
 
+#include "Timer.h"
+#include "elapsedMillis.h"
+#include "expo.h"
 // Prototypes
+
+#ifndef LED_BUILTIN
+#define LED_BUILTIN 13
+#endif
+
 
 int tonfolge[3] = {554, 329, 440};
 void sendCurrentRobotArmState();
 void writeServoValues(int servoIndex, int value);
+
+// uint16_t          servomittearray[NUM_SERVOS] = {}; // Werte fuer Mitte
+// von RC22
+#define NUM_SERVOS 4
+uint16_t          servomittearray[NUM_SERVOS] = {}; // Werte fuer Mitte
+
+uint16_t maxwinkel = 180;
+
 
 uint8_t tonstatus = 0;
 uint8_t tonindex = 0;
 void playTon(int ton);
 #define START_TON 0
 #define END_TON 1
+
+uint8_t expolevel = 3;
+
+
+int ledintervall = 1000;
+Timer timer;
+elapsedMillis ledmillis;
 struct ServoPins
 {
   Servo servo;
@@ -200,6 +223,8 @@ border: 1px solid black;
    
         <td><input type="button" id="Licht" value="Licht"  ontouchend='onclickButton(this)' onclick='onclickButton(this)'></td>
      
+
+     
       <!--
       </tr>  
       <tr>
@@ -363,6 +388,15 @@ void onRobotArmInputWebSocketEvent(AsyncWebSocket *server,
         std::getline(ss, value, ',');
         //Serial.printf("Key [%s] Value[%s]\n", key.c_str(), value.c_str()); 
         int valueInt = atoi(value.c_str()); 
+        int expovalue = 0;
+        if (valueInt > maxwinkel/2)
+        {
+          expovalue = maxwinkel/2 +  expoarray[expolevel][valueInt - maxwinkel/2];
+        }
+        else
+        {
+          expovalue = maxwinkel/2 -  expoarray[expolevel][maxwinkel/2 - valueInt ];
+        }
         
 
         if (key == "Record")
@@ -380,15 +414,16 @@ void onRobotArmInputWebSocketEvent(AsyncWebSocket *server,
           Serial.printf("key play\n");
           playRecordedSteps = valueInt;
         }
-         else if (key == "Links")
+         else if (key == "Rechts")
+        {
+          
+          Serial.printf("Rechts: [%d]\n",valueInt);
+          writeServoValues(0, 90 + ((expovalue) - 90)/3);  // Richtung inv.         
+        } 
+        else if (key == "Links")
         {
           Serial.printf("Links: [%d]\n",valueInt);
-          writeServoValues(0, valueInt);           
-        } 
-        else if (key == "Rechts")
-        {
-          Serial.printf("Rechts: [%d]\n",valueInt);
-          writeServoValues(1, valueInt);           
+          writeServoValues(1,90 + ((180 - expovalue) - 90)/3);           
         }         
         else if (key == "Gripper")
         {
@@ -518,6 +553,15 @@ void setup(void)
   setUpPinModes();
   Serial.begin(115200);
 
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
+  timer.start();
+  if(timer.state() == RUNNING) Serial.println("timer running");
+  delay(1000);
+  timer.stop();
+  if(timer.state() == STOPPED) Serial.println("timer stopped");
+  Serial.print("time elapsed ms: ");
+  Serial.println(timer.read());
 
 
   WiFi.softAP(ssid, password);
@@ -538,6 +582,12 @@ void setup(void)
 
 void loop() 
 {
+  
+  if (ledmillis > ledintervall)
+  {
+    ledmillis = 0;
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+  }
   wsRobotArmInput.cleanupClients();
   if (tonstatus & (1<<START_TON))
   {
