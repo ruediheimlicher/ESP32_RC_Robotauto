@@ -16,6 +16,7 @@
 #define LED_BUILTIN 13
 #endif
 
+#define BATT_PIN 33
 
 int tonfolge[3] = {554, 329, 440};
 void sendCurrentRobotArmState();
@@ -37,10 +38,13 @@ void playTon(int ton);
 
 uint8_t expolevel = 3;
 
+uint8_t ubatt = 0;
 
 int ledintervall = 1000;
 Timer timer;
 elapsedMillis ledmillis;
+
+
 struct ServoPins
 {
   Servo servo;
@@ -274,26 +278,39 @@ border: 1px solid black;
       function initRobotArmInputWebSocket() 
       {
         websocketRobotArmInput = new WebSocket(webSocketRobotArmInputUrl);
-        websocketRobotArmInput.onopen    = function(event){};
+        websocketRobotArmInput.onopen    = onOpen; <!--function(event){};-->
         websocketRobotArmInput.onclose   = function(event){setTimeout(initRobotArmInputWebSocket, 2000);};
         websocketRobotArmInput.onmessage    = function(event)
         
         {
           var keyValue = event.data.split(",");
+
+          console.log("keyValue 0: " + keyValue[0] + " keyValue 1: " + keyValue[1]);
+           
           var button = document.getElementById(keyValue[0]);
-          button.value = keyValue[1];
-          if (button.id == "Record" || button.id == "Play")
+          if(typeof button !== 'undefined' && button !== null) <!-- stackoverflow.com/questions/13885533/it-says-that-typeerror-document -->
           {
-            button.style.backgroundColor = (button.value == "ON" ? "green" : "red");  
-            enableDisableButtonsSliders(button);
+            button.value = keyValue[1];
+            if (button.id == "Record" || button.id == "Play")
+            {
+             button.style.backgroundColor = (button.value == "ON" ? "green" : "red");  
+              enableDisableButtonsSliders(button);
+            }
           }
         };
       }
       
+      function onOpen(event) 
+      {  
+        console.log('Connection opened');
+      }
       function sendButtonInput(key, value) 
       {
+       
         var data = key + "," + value;
+        console.log("key: " + key + " data: " + data);
         websocketRobotArmInput.send(data);
+
       }
       
       function sendMouseUp(key, value) 
@@ -306,9 +323,9 @@ border: 1px solid black;
       {
         
         //button.value = (button.value == "ON") ? "OFF" : "ON" ;        
-        button.value = "Signal";
+        <!--button.value = "Signal"; -->
         button.style.backgroundColor = (button.value == "ON" ? "green" : "red");          
-        var value = (button.value == "ON") ? 1 : 0 ;
+        var value = (button.value ); <!--== "ON") ? 1 : 0 ;-->
         sendButtonInput(button.id, value);
         enableDisableButtonsSliders(button);
       }
@@ -386,7 +403,7 @@ void onRobotArmInputWebSocketEvent(AsyncWebSocket *server,
         std::string key, value;
         std::getline(ss, key, ',');
         std::getline(ss, value, ',');
-        //Serial.printf("Key [%s] Value[%s]\n", key.c_str(), value.c_str()); 
+        Serial.printf("Key [%s] Value[%s]\n", key.c_str(), value.c_str()); 
         int valueInt = atoi(value.c_str()); 
         int expovalue = 0;
         if (valueInt > maxwinkel/2)
@@ -469,6 +486,12 @@ void sendCurrentRobotArmState()
   wsRobotArmInput.textAll(String("Record,") + (recordSteps ? "ON" : "OFF"));
   wsRobotArmInput.textAll(String("Play,") + (playRecordedSteps ? "ON" : "OFF"));  
 }
+
+
+void notifyClients() {
+    wsRobotArmInput.textAll(String("ubatt")+ "," + ubatt);
+}
+
 
 void writeServoValues(int servoIndex, int value)
 {
@@ -555,6 +578,8 @@ void setup(void)
 
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
+  pinMode(BATT_PIN, INPUT);
+  
   timer.start();
   if(timer.state() == RUNNING) Serial.println("timer running");
   delay(1000);
@@ -587,6 +612,8 @@ void loop()
   {
     ledmillis = 0;
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    ubatt = analogRead(BATT_PIN);
+    Serial.printf("U Bat: %d\n",ubatt);
   }
   wsRobotArmInput.cleanupClients();
   if (tonstatus & (1<<START_TON))
