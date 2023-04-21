@@ -7,8 +7,6 @@
 //
 #include <stdint.h>
 
-
-
 // erstes Element ist linear
 const uint16_t expoarray[6][256] = 
 {

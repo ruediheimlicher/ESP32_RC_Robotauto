@@ -10,6 +10,9 @@
 #include "Timer.h"
 #include "elapsedMillis.h"
 #include "expo.h"
+
+
+// Smartphone: 192.168.4.1
 // Prototypes
 
 #ifndef LED_BUILTIN
@@ -30,15 +33,15 @@ uint16_t          servomittearray[NUM_SERVOS] = {}; // Werte fuer Mitte
 uint16_t maxwinkel = 180;
 
 
-uint8_t tonstatus = 0;
+uint8_t buttonstatus = 0;
 uint8_t tonindex = 0;
 void playTon(int ton);
 #define START_TON 0
-#define END_TON 1
+#define LICHT_ON 1
 
 uint8_t expolevel = 3;
 
-uint8_t ubatt = 0;
+uint16_t ubatt = 0;
 
 int ledintervall = 1000;
 Timer timer;
@@ -225,8 +228,12 @@ border: 1px solid black;
 
        <td><input type="button" id="Signal" value="Signal" ontouchend='onclickButton(this)' onclick='onclickButton(this)'></td>
    
-        <td><input type="button" id="Licht" value="Licht"  ontouchend='onclickButton(this)' onclick='onclickButton(this)'></td>
-     
+      <td><input type="button" id="Licht" value="Licht"  ontouchend='onclickButton(this)' onclick='onclickButton(this)'></td>
+     <tr>
+          <td  style="text-align:left;font-size:25px"><b>Batt:</b></td>
+          <td> <style="text-align:left;font-size:45px" id="ubatt" value="0" > -- </td>
+          
+     </tr>
 
      
       <!--
@@ -281,11 +288,12 @@ border: 1px solid black;
         websocketRobotArmInput.onopen    = onOpen; <!--function(event){};-->
         websocketRobotArmInput.onclose   = function(event){setTimeout(initRobotArmInputWebSocket, 2000);};
         websocketRobotArmInput.onmessage    = function(event)
-        
         {
+          console.log(`Received a notification from ${event.origin}`);
+          console.log(event);
           var keyValue = event.data.split(",");
 
-          console.log("keyValue 0: " + keyValue[0] + " keyValue 1: " + keyValue[1]);
+          console.log("initRobotArmInputWebSocket keyValue 0: " + keyValue[0] + " keyValue 1: " + keyValue[1]);
            
           var button = document.getElementById(keyValue[0]);
           if(typeof button !== 'undefined' && button !== null) <!-- stackoverflow.com/questions/13885533/it-says-that-typeerror-document -->
@@ -296,6 +304,16 @@ border: 1px solid black;
              button.style.backgroundColor = (button.value == "ON" ? "green" : "red");  
               enableDisableButtonsSliders(button);
             }
+          }
+          if (keyValue[0] == "ubatt")
+          {
+            console.log("ubatt: " + keyValue[1]);
+            var ubattfeld = document.getElementById("ubatt");
+            ubattfeld.style.fontWeight = 'bold';
+            ubattfeld.style.fontSize = '25px';;
+            ubattfeld.style.color = 'blue';
+            ubattfeld.innerHTML = keyValue[1];
+
           }
         };
       }
@@ -459,11 +477,12 @@ void onRobotArmInputWebSocketEvent(AsyncWebSocket *server,
         {
             Serial.printf("Signal\n");
             // playTon(1);
-            tonstatus |= (1<<START_TON); // 
+            buttonstatus |= (1<<START_TON); // 
         }
         else if (key == "Licht")
         {
             Serial.printf("Licht\n");
+             buttonstatus ^= (1<<LICHT_ON); // 
         }
 
              
@@ -508,6 +527,7 @@ void writeServoValues(int servoIndex, int value)
         recordedSteps.push_back(recordedStep);         
       }      
     }
+     
     unsigned long currentTime = millis();
     recordedStep.servoIndex = servoIndex; 
     recordedStep.value = value; 
@@ -516,8 +536,6 @@ void writeServoValues(int servoIndex, int value)
     previousTimeInMilli = currentTime;         
   }
   Serial.printf("pin: [%d] servoindex: [%d] value: [%d]  \n",servoPins[servoIndex].servoPin , servoIndex, value);
-
-
   servoPins[servoIndex].servo.write(value);   
 }
 
@@ -607,16 +625,18 @@ void setup(void)
 
 void loop() 
 {
-  
+   
   if (ledmillis > ledintervall)
   {
     ledmillis = 0;
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
     ubatt = analogRead(BATT_PIN);
-    Serial.printf("U Bat: %d\n",ubatt);
+    float ubattfloat = ubatt * 2.2*3.3/4096;
+    Serial.printf("U Bat: %d %2.2f\n",ubatt, ubattfloat);
+    notifyClients();
   }
   wsRobotArmInput.cleanupClients();
-  if (tonstatus & (1<<START_TON))
+  if (buttonstatus & (1<<START_TON))
   {
     playTon(tonindex);
     
@@ -626,7 +646,7 @@ void loop()
     }
     else
     {
-      tonstatus &= ~(1<<START_TON);
+      buttonstatus &= ~(1<<START_TON);
       tonindex = 0;
     }
     
